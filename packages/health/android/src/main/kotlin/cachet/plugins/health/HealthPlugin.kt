@@ -11,6 +11,8 @@ import androidx.annotation.NonNull
 // import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
 import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInClient
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.fitness.Fitness
 import com.google.android.gms.fitness.FitnessActivities
 import com.google.android.gms.fitness.FitnessOptions
