@@ -130,39 +130,39 @@ class WorkoutHealthValue extends HealthValue {
   factory WorkoutHealthValue.fromJson(json) {
     return WorkoutHealthValue(
         HealthWorkoutActivityType.values.firstWhere(
-            (element) => element.name == json['workoutActivityType']),
+            (element) => element.typeToString() == json['workoutActivityType']),
         json['totalEnergyBurned'] != null
-            ? (json['totalEnergyBurned'] as num).toInt()
+            ? (json['totalEnergyBurned'] as double).toInt()
             : null,
         json['totalEnergyBurnedUnit'] != null
-            ? HealthDataUnit.values.firstWhere(
-                (element) => element.name == json['totalEnergyBurnedUnit'])
+            ? HealthDataUnit.values.firstWhere((element) =>
+                element.typeToString() == json['totalEnergyBurnedUnit'])
             : null,
         json['totalDistance'] != null
-            ? (json['totalDistance'] as num).toInt()
+            ? (json['totalDistance'] as double).toInt()
             : null,
         json['totalDistanceUnit'] != null
-            ? HealthDataUnit.values.firstWhere(
-                (element) => element.name == json['totalDistanceUnit'])
+            ? HealthDataUnit.values.firstWhere((element) =>
+                element.typeToString() == json['totalDistanceUnit'])
             : null);
   }
 
   @override
   Map<String, dynamic> toJson() => {
-        'workoutActivityType': _workoutActivityType.name,
+        'workoutActivityType': _workoutActivityType.toString(),
         'totalEnergyBurned': _totalEnergyBurned,
-        'totalEnergyBurnedUnit': _totalEnergyBurnedUnit?.name,
+        'totalEnergyBurnedUnit': _totalEnergyBurnedUnit?.toString(),
         'totalDistance': _totalDistance,
-        'totalDistanceUnit': _totalDistanceUnit?.name,
+        'totalDistanceUnit': _totalDistanceUnit?.toString(),
       };
 
   @override
   String toString() {
-    return """workoutActivityType: ${workoutActivityType.name},
-           totalEnergyBurned: $totalEnergyBurned,
-           totalEnergyBurnedUnit: ${totalEnergyBurnedUnit?.name},
-           totalDistance: $totalDistance,
-           totalDistanceUnit: ${totalDistanceUnit?.name}""";
+    return """workoutActivityType: ${workoutActivityType.toString()},
+    totalEnergyBurned: $totalEnergyBurned,
+    totalEnergyBurnedUnit: ${totalEnergyBurnedUnit?.toString()},
+    totalDistance: $totalDistance,
+    totalDistanceUnit: ${totalDistanceUnit?.toString()}""";
   }
 
   @override
@@ -185,18 +185,15 @@ class WorkoutHealthValue extends HealthValue {
 /// Parameters:
 /// * [voltageValues] - an array of [ElectrocardiogramVoltageValue]
 /// * [averageHeartRate] - the average heart rate during the ECG (in BPM)
-/// * [samplingFrequency] - the frequency at which the Apple Watch sampled the voltage.
 /// * [classification] - an [ElectrocardiogramClassification]
 class ElectrocardiogramHealthValue extends HealthValue {
   List<ElectrocardiogramVoltageValue> voltageValues;
   num? averageHeartRate;
-  double? samplingFrequency;
   ElectrocardiogramClassification classification;
 
   ElectrocardiogramHealthValue({
     required this.voltageValues,
     required this.averageHeartRate,
-    required this.samplingFrequency,
     required this.classification,
   });
 
@@ -206,7 +203,6 @@ class ElectrocardiogramHealthValue extends HealthValue {
             .map((e) => ElectrocardiogramVoltageValue.fromJson(e))
             .toList(),
         averageHeartRate: json['averageHeartRate'],
-        samplingFrequency: json['samplingFrequency'],
         classification: ElectrocardiogramClassification.values
             .firstWhere((c) => c.value == json['classification']),
       );
@@ -215,7 +211,6 @@ class ElectrocardiogramHealthValue extends HealthValue {
         'voltageValues':
             voltageValues.map((e) => e.toJson()).toList(growable: false),
         'averageHeartRate': averageHeartRate,
-        'samplingFrequency': samplingFrequency,
         'classification': classification.value,
       };
 
@@ -224,16 +219,15 @@ class ElectrocardiogramHealthValue extends HealthValue {
       o is ElectrocardiogramHealthValue &&
       voltageValues == o.voltageValues &&
       averageHeartRate == o.averageHeartRate &&
-      samplingFrequency == o.samplingFrequency &&
       classification == o.classification;
 
   @override
-  int get hashCode => Object.hash(
-      voltageValues, averageHeartRate, samplingFrequency, classification);
+  int get hashCode =>
+      Object.hash(voltageValues, averageHeartRate, classification);
 
   @override
   String toString() =>
-      '${voltageValues.length} values, $averageHeartRate BPM, $samplingFrequency HZ, $classification';
+      '${voltageValues.length} values, $averageHeartRate BPM, $classification';
 }
 
 /// Single voltage value belonging to a [ElectrocardiogramHealthValue]

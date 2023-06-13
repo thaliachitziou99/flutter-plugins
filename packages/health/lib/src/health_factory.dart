@@ -10,24 +10,14 @@ part of health;
 ///  * writing health data using the [writeHealthData] method.
 ///  * accessing total step counts using the [getTotalStepsInInterval] method.
 ///  * cleaning up dublicate data points via the [removeDuplicates] method.
-class HealthFactory {
+class HealthFactory{
   static const MethodChannel _channel = MethodChannel('flutter_health');
   String? _deviceId;
   final _deviceInfo = DeviceInfoPlugin();
-  late bool _useHealthConnectIfAvailable;
 
   static PlatformType _platformType =
-  Platform.isAndroid ? PlatformType.ANDROID : PlatformType.IOS;
-
-  // The plugin was created to use Health Connect (if true) or Google Fit (if false).
-  bool get useHealthConnectIfAvailable => _useHealthConnectIfAvailable;
-
-  HealthFactory({bool useHealthConnectIfAvailable = false}) {
-    _useHealthConnectIfAvailable = useHealthConnectIfAvailable;
-    if (_useHealthConnectIfAvailable)
-      _channel.invokeMethod('useHealthConnectIfAvailable');
-  }
-
+      Platform.isAndroid ? PlatformType.ANDROID : PlatformType.IOS;
+  
   /// Check if a given data type is available on the platform
   bool isDataTypeAvailable(HealthDataType dataType) =>
       _platformType == PlatformType.ANDROID
@@ -57,7 +47,8 @@ class HealthFactory {
   ///   with a READ or READ_WRITE access.
   ///
   ///   On Android, this function returns true or false, depending on whether the specified access right has been granted.
-  Future<bool?> hasPermissions(List<HealthDataType> types,
+  
+  static Future<bool?> hasPermissions(List<HealthDataType> types,
       {List<HealthDataAccess>? permissions}) async {
     if (permissions != null && permissions.length != types.length)
       throw ArgumentError(
@@ -66,22 +57,21 @@ class HealthFactory {
     final mTypes = List<HealthDataType>.from(types, growable: true);
     final mPermissions = permissions == null
         ? List<int>.filled(types.length, HealthDataAccess.READ.index,
-        growable: true)
+            growable: true)
         : permissions.map((permission) => permission.index).toList();
 
     /// On Android, if BMI is requested, then also ask for weight and height
     if (_platformType == PlatformType.ANDROID) _handleBMI(mTypes, mPermissions);
 
     return await _channel.invokeMethod('hasPermissions', {
-      "types": mTypes.map((type) => type.name).toList(),
+      "types": mTypes.map((type) => type.typeToString()).toList(),
       "permissions": mPermissions,
     });
   }
 
-  /// Revokes permissions of all types.
-  /// Uses `disableFit()` on Google Fit.
+  /// Revoke permissions obtained earlier.
   ///
-  /// Not implemented on iOS as there is no way to programmatically remove access.
+  /// Not supported on iOS and method does nothing.
   Future<void> revokePermissions() async {
     try {
       if (_platformType == PlatformType.IOS) {
@@ -113,9 +103,9 @@ class HealthFactory {
   ///   this method will return **true if the window asking for permission was showed to the user without errors**
   ///   if it is called on iOS with a READ or READ_WRITE access.
   Future<bool> requestAuthorization(
-      List<HealthDataType> types, {
-        List<HealthDataAccess>? permissions,
-      }) async {
+    List<HealthDataType> types, {
+    List<HealthDataAccess>? permissions,
+  }) async {
     if (permissions != null && permissions.length != types.length) {
       throw ArgumentError(
           'The length of [types] must be same as that of [permissions].');
@@ -136,13 +126,13 @@ class HealthFactory {
     final mTypes = List<HealthDataType>.from(types, growable: true);
     final mPermissions = permissions == null
         ? List<int>.filled(types.length, HealthDataAccess.READ.index,
-        growable: true)
+            growable: true)
         : permissions.map((permission) => permission.index).toList();
 
     // on Android, if BMI is requested, then also ask for weight and height
     if (_platformType == PlatformType.ANDROID) _handleBMI(mTypes, mPermissions);
 
-    List<String> keys = mTypes.map((e) => e.name).toList();
+    List<String> keys = mTypes.map((e) => _enumToString(e)).toList();
     final bool? isAuthorized = await _channel.invokeMethod(
         'requestAuthorization', {'types': keys, "permissions": mPermissions});
     return isAuthorized ?? false;
@@ -174,17 +164,17 @@ class HealthFactory {
   Future<List<HealthDataPoint>> _computeAndroidBMI(
       DateTime startTime, DateTime endTime) async {
     List<HealthDataPoint> heights =
-    await _prepareQuery(startTime, endTime, HealthDataType.HEIGHT);
+        await _prepareQuery(startTime, endTime, HealthDataType.HEIGHT);
 
     if (heights.isEmpty) {
       return [];
     }
 
     List<HealthDataPoint> weights =
-    await _prepareQuery(startTime, endTime, HealthDataType.WEIGHT);
+        await _prepareQuery(startTime, endTime, HealthDataType.WEIGHT);
 
     double h =
-    (heights.last.value as NumericHealthValue).numericValue.toDouble();
+        (heights.last.value as NumericHealthValue).numericValue.toDouble();
 
     const dataType = HealthDataType.BODY_MASS_INDEX;
     final unit = _dataTypeToUnit[dataType]!;
@@ -222,16 +212,15 @@ class HealthFactory {
   /// * [endTime] - the end time when this [value] is measured.
   ///   + It must be equal to or later than [startTime].
   ///   + Simply set [endTime] equal to [startTime] if the [value] is measured only at a specific point in time.
-  /// * [unit] - <mark>(iOS ONLY)</mark> the unit the health data is measured in.
   ///
   /// Values for Sleep and Headache are ignored and will be automatically assigned the coresponding value.
   Future<bool> writeHealthData(
-      double value,
-      HealthDataType type,
-      DateTime startTime,
-      DateTime endTime, {
-        HealthDataUnit? unit,
-      }) async {
+    double value,
+    HealthDataType type,
+    DateTime startTime,
+    DateTime endTime, {
+    HealthDataUnit? unit,
+  }) async {
     if (type == HealthDataType.WORKOUT)
       throw ArgumentError(
           "Adding workouts should be done using the writeWorkoutData method.");
@@ -242,8 +231,7 @@ class HealthFactory {
       HealthDataType.LOW_HEART_RATE_EVENT,
       HealthDataType.IRREGULAR_HEART_RATE_EVENT,
       HealthDataType.ELECTROCARDIOGRAM,
-    }.contains(type) &&
-        _platformType == PlatformType.IOS)
+    }.contains(type))
       throw ArgumentError(
           "$type - iOS doesnt support writing this data type in HealthKit");
 
@@ -265,98 +253,12 @@ class HealthFactory {
 
     Map<String, dynamic> args = {
       'value': value,
-      'dataTypeKey': type.name,
-      'dataUnitKey': unit.name,
+      'dataTypeKey': type.typeToString(),
+      'dataUnitKey': unit.typeToString(),
       'startTime': startTime.millisecondsSinceEpoch,
       'endTime': endTime.millisecondsSinceEpoch
     };
     bool? success = await _channel.invokeMethod('writeData', args);
-    return success ?? false;
-  }
-
-  /// Deletes all records of the given type for a given period of time
-  ///
-  /// Returns true if successful, false otherwise.
-  ///
-  /// Parameters:
-  /// * [type] - the value's HealthDataType
-  /// * [startTime] - the start time when this [value] is measured.
-  ///   + It must be equal to or earlier than [endTime].
-  /// * [endTime] - the end time when this [value] is measured.
-  ///   + It must be equal to or later than [startTime].
-  Future<bool> delete(
-      HealthDataType type, DateTime startTime, DateTime endTime) async {
-    if (startTime.isAfter(endTime))
-      throw ArgumentError("startTime must be equal or earlier than endTime");
-
-    Map<String, dynamic> args = {
-      'dataTypeKey': type.name,
-      'startTime': startTime.millisecondsSinceEpoch,
-      'endTime': endTime.millisecondsSinceEpoch
-    };
-    bool? success = await _channel.invokeMethod('delete', args);
-    return success ?? false;
-  }
-
-  /// Saves blood pressure record into Apple Health or Google Fit.
-  ///
-  /// Returns true if successful, false otherwise.
-  ///
-  /// Parameters:
-  /// * [systolic] - the systolic part of the blood pressure
-  /// * [diastolic] - the diastolic part of the blood pressure
-  /// * [startTime] - the start time when this [value] is measured.
-  ///   + It must be equal to or earlier than [endTime].
-  /// * [endTime] - the end time when this [value] is measured.
-  ///   + It must be equal to or later than [startTime].
-  ///   + Simply set [endTime] equal to [startTime] if the blood pressure is measured only at a specific point in time.
-  Future<bool> writeBloodPressure(
-      int systolic, int diastolic, DateTime startTime, DateTime endTime) async {
-    if (startTime.isAfter(endTime))
-      throw ArgumentError("startTime must be equal or earlier than endTime");
-
-    Map<String, dynamic> args = {
-      'systolic': systolic,
-      'diastolic': diastolic,
-      'startTime': startTime.millisecondsSinceEpoch,
-      'endTime': endTime.millisecondsSinceEpoch
-    };
-    bool? success = await _channel.invokeMethod('writeBloodPressure', args);
-    return success ?? false;
-  }
-
-  /// Saves blood oxygen saturation record into Apple Health or Google Fit/Health Connect.
-  ///
-  /// Returns true if successful, false otherwise.
-  ///
-  /// Parameters:
-  /// * [saturation] - the saturation of the blood oxygen in percentage
-  /// * [flowRate] - optional supplemental oxygen flow rate, only supported on Google Fit (default 0.0)
-  /// * [startTime] - the start time when this [value] is measured.
-  ///   + It must be equal to or earlier than [endTime].
-  /// * [endTime] - the end time when this [value] is measured.
-  ///   + It must be equal to or later than [startTime].
-  ///   + Simply set [endTime] equal to [startTime] if the blood oxygen saturation is measured only at a specific point in time.
-  Future<bool> writeBloodOxygen(
-      double saturation, DateTime startTime, DateTime endTime,
-      {double flowRate = 0.0}) async {
-    if (startTime.isAfter(endTime))
-      throw ArgumentError("startTime must be equal or earlier than endTime");
-    bool? success;
-
-    if (_platformType == PlatformType.IOS) {
-      success = await writeHealthData(
-          saturation, HealthDataType.BLOOD_OXYGEN, startTime, endTime);
-    } else if (_platformType == PlatformType.ANDROID) {
-      Map<String, dynamic> args = {
-        'value': saturation,
-        'flowRate': flowRate,
-        'startTime': startTime.millisecondsSinceEpoch,
-        'endTime': endTime.millisecondsSinceEpoch,
-        'dataTypeKey': HealthDataType.BLOOD_OXYGEN.name,
-      };
-      success = await _channel.invokeMethod('writeBloodOxygen', args);
-    }
     return success ?? false;
   }
 
@@ -398,7 +300,7 @@ class HealthFactory {
       'frequencies': frequencies,
       'leftEarSensitivities': leftEarSensitivities,
       'rightEarSensitivities': rightEarSensitivities,
-      'dataTypeKey': HealthDataType.AUDIOGRAM.name,
+      'dataTypeKey': HealthDataType.AUDIOGRAM.typeToString(),
       'startTime': startTime.millisecondsSinceEpoch,
       'endTime': endTime.millisecondsSinceEpoch,
       'metadata': metadata,
@@ -409,7 +311,10 @@ class HealthFactory {
 
   /// Fetch a list of health data points based on [types].
   Future<List<HealthDataPoint>> getHealthDataFromTypes(
-      DateTime startTime, DateTime endTime, List<HealthDataType> types) async {
+    DateTime startTime,
+    DateTime endTime,
+    List<HealthDataType> types,
+  ) async {
     List<HealthDataPoint> dataPoints = [];
 
     for (var type in types) {
@@ -451,8 +356,8 @@ class HealthFactory {
   Future<List<HealthDataPoint>> _dataQuery(
       DateTime startTime, DateTime endTime, HealthDataType dataType) async {
     final args = <String, dynamic>{
-      'dataTypeKey': dataType.name,
-      'dataUnitKey': _dataTypeToUnit[dataType]!.name,
+      'dataTypeKey': dataType.typeToString(),
+      'dataUnitKey': _dataTypeToUnit[dataType]!.typeToString(),
       'startTime': startTime.millisecondsSinceEpoch,
       'endTime': endTime.millisecondsSinceEpoch
     };
@@ -523,9 +428,9 @@ class HealthFactory {
   ///
   /// Is a fix according to https://stackoverflow.com/questions/29414386/step-count-retrieved-through-google-fit-api-does-not-match-step-count-displayed/29415091#29415091
   Future<int?> getTotalStepsInInterval(
-      DateTime startTime,
-      DateTime endTime,
-      ) async {
+    DateTime startTime,
+    DateTime endTime,
+  ) async {
     final args = <String, dynamic>{
       'startTime': startTime.millisecondsSinceEpoch,
       'endTime': endTime.millisecondsSinceEpoch
@@ -574,31 +479,30 @@ class HealthFactory {
   /// - [totalDistance] The total distance traveled during the workout
   /// - [totalDistanceUnit] The UNIT used to measure [totalDistance] *ONLY FOR IOS* Default value is METER.
   Future<bool> writeWorkoutData(
-      HealthWorkoutActivityType activityType,
-      DateTime start,
-      DateTime end, {
-        int? totalEnergyBurned,
-        HealthDataUnit totalEnergyBurnedUnit = HealthDataUnit.KILOCALORIE,
-        int? totalDistance,
-        HealthDataUnit totalDistanceUnit = HealthDataUnit.METER,
-      }) async {
+    HealthWorkoutActivityType activityType,
+    DateTime start,
+    DateTime end, {
+    int? totalEnergyBurned,
+    HealthDataUnit totalEnergyBurnedUnit = HealthDataUnit.KILOCALORIE,
+    int? totalDistance,
+    HealthDataUnit totalDistanceUnit = HealthDataUnit.METER,
+  }) async {
     // Check that value is on the current Platform
     if (_platformType == PlatformType.IOS && !_isOnIOS(activityType)) {
       throw HealthException(activityType,
           "Workout activity type $activityType is not supported on iOS");
-    } else if (_platformType == PlatformType.ANDROID &&
-        !_isOnAndroid(activityType)) {
+    } else if (!_isOnAndroid(activityType)) {
       throw HealthException(activityType,
           "Workout activity type $activityType is not supported on Android");
     }
     final args = <String, dynamic>{
-      'activityType': activityType.name,
+      'activityType': activityType.typeToString(),
       'startTime': start.millisecondsSinceEpoch,
       'endTime': end.millisecondsSinceEpoch,
       'totalEnergyBurned': totalEnergyBurned,
-      'totalEnergyBurnedUnit': totalEnergyBurnedUnit.name,
+      'totalEnergyBurnedUnit': _enumToString(totalEnergyBurnedUnit),
       'totalDistance': totalDistance,
-      'totalDistanceUnit': totalDistanceUnit.name,
+      'totalDistanceUnit': _enumToString(totalDistanceUnit),
     };
     final success = await _channel.invokeMethod('writeWorkoutData', args);
     return success ?? false;
