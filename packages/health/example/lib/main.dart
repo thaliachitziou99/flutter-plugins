@@ -56,7 +56,7 @@ class _HealthAppState extends State<HealthApp> {
   final permissions = types.map((e) => HealthDataAccess.READ_WRITE).toList();
 
   // create a HealthFactory for use in the app
-  HealthFactory health = HealthFactory(useHealthConnectIfAvailable: true);
+  HealthFactory health = HealthFactory();
 
   Future authorize() async {
     // If we are trying to read Step Count, Workout, Sleep or other data that requires
@@ -69,7 +69,7 @@ class _HealthAppState extends State<HealthApp> {
 
     // Check if we have permission
     bool? hasPermissions =
-        await health.hasPermissions(types, permissions: permissions);
+        await health.requestAuthorization(types, permissions: permissions);
 
     // hasPermissions = false because the hasPermission cannot disclose if WRITE access exists.
     // Hence, we have to request with WRITE as well.
@@ -150,7 +150,7 @@ class _HealthAppState extends State<HealthApp> {
         70, HealthDataType.HEART_RATE, earlier, now);
     success &= await health.writeHealthData(
         37, HealthDataType.BODY_TEMPERATURE, earlier, now);
-    success &= await health.writeBloodOxygen(98, earlier, now, flowRate: 1.0);
+    // success &= await health.writeBloodOxygen(98, earlier, now, flowRate: 1.0);
     success &= await health.writeHealthData(
         105, HealthDataType.BLOOD_GLUCOSE, earlier, now);
     success &=
@@ -161,7 +161,7 @@ class _HealthAppState extends State<HealthApp> {
         now,
         totalDistance: 2430,
         totalEnergyBurned: 400);
-    success &= await health.writeBloodPressure(90, 80, earlier, now);
+    // success &= await health.writeBloodPressure(90, 80, earlier, now);
 
     // Store an Audiogram
     // Uncomment these on iOS - only available on iOS
@@ -193,7 +193,7 @@ class _HealthAppState extends State<HealthApp> {
 
     bool success = true;
     for (HealthDataType type in types) {
-      success &= await health.delete(type, earlier, now);
+      // success &= await health.delete(type, earlier, now);
     }
 
     setState(() {
