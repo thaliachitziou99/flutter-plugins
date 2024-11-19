@@ -1,6 +1,6 @@
 name: health
 description: Wrapper for HealthKit on iOS and Google Fit and Health Connect on Android.
-version: 6.0.0
+version: 11.1.0
 homepage: https://github.com/cph-cachet/flutter-plugins/tree/master/packages/health
 
 environment:
@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   intl: ^0.18.1
-  device_info_plus: ^11.0.0
+  device_info_plus: ^11.1.1
 
 dev_dependencies:
   flutter_test:
